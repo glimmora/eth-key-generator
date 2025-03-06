@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { ethers } from "ethers";
 
@@ -13,6 +11,7 @@ export default function Home() {
   const [generateCount, setGenerateCount] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchCancelled, setSearchCancelled] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const generateKey = () => {
     let keys = [];
@@ -29,7 +28,9 @@ export default function Home() {
   const searchKey = () => {
     setIsSearching(true);
     setSearchCancelled(false);
+    setProgress(0);
     let wallet;
+    let attempts = 0;
 
     const findWallet = () => {
       if (searchCancelled) {
@@ -37,6 +38,8 @@ export default function Home() {
         return;
       }
       wallet = ethers.Wallet.createRandom();
+      attempts++;
+      setProgress(attempts % 100);
       if (
         (!prefix || wallet.address.startsWith(prefix)) &&
         (!suffix || wallet.address.endsWith(suffix))
@@ -45,7 +48,7 @@ export default function Home() {
         setSearchAddress(wallet.address);
         setIsSearching(false);
       } else {
-        setTimeout(findWallet, 10); // Memberikan jeda untuk menghindari pembekuan UI
+        setTimeout(findWallet, 10);
       }
     };
 
@@ -54,6 +57,30 @@ export default function Home() {
 
   const cancelSearch = () => {
     setSearchCancelled(true);
+  };
+
+  const clearResults = () => {
+    setPrivateKeys([]);
+    setAddresses([]);
+    setSearchPrivateKey("");
+    setSearchAddress("");
+  };
+
+  const exportResults = () => {
+    const data = JSON.stringify({
+      privateKeys,
+      addresses,
+      searchPrivateKey,
+      searchAddress,
+    }, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "eth_keys.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const copyToClipboard = (text) => {
@@ -108,56 +135,34 @@ export default function Home() {
             {isSearching ? "Searching..." : "Search Key"}
           </button>
           {isSearching && (
-            <button
-              onClick={cancelSearch}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
-            >
-              Cancel Search
-            </button>
+            <>
+              <div className="w-full bg-gray-200 h-2 mt-2">
+                <div className="bg-green-500 h-2" style={{ width: `${progress}%` }}></div>
+              </div>
+              <button
+                onClick={cancelSearch}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
+              >
+                Cancel Search
+              </button>
+            </>
           )}
         </div>
       </div>
 
       {(privateKeys.length > 0 || searchPrivateKey) && (
         <div className="mt-6 p-4 bg-white shadow-md rounded w-full max-w-2xl">
-          {privateKeys.length > 0 && privateKeys.map((key, index) => (
-            <div key={index} className="mb-4 border-b pb-2">
-              <p className="break-all"><strong>Generated Private Key:</strong> {key}</p>
-              <button 
-                onClick={() => copyToClipboard(key)}
-                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
-              >
-                Copy Private Key
-              </button>
-              <p className="break-all mt-2"><strong>Generated Address:</strong> {addresses[index]}</p>
-              <button 
-                onClick={() => copyToClipboard(addresses[index])}
-                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
-              >
-                Copy Address
-              </button>
-            </div>
-          ))}
-          {searchPrivateKey && (
-            <div className="mt-4">
-              <p className="break-all"><strong>Found Private Key:</strong> {searchPrivateKey}</p>
-              <button 
-                onClick={() => copyToClipboard(searchPrivateKey)}
-                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
-              >
-                Copy Private Key
-              </button>
-              <p className="break-all mt-2"><strong>Found Address:</strong> {searchAddress}</p>
-              <button 
-                onClick={() => copyToClipboard(searchAddress)}
-                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
-              >
-                Copy Address
-              </button>
-            </div>
+          {privateKeys.length > 0 && (
+            <button onClick={clearResults} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 w-full mb-2">Clear Results</button>
+          )}
+          {privateKeys.length > 0 && (
+            <button onClick={exportResults} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full mb-2">Export to JSON</button>
           )}
         </div>
       )}
+      <footer className="mt-6 text-center text-gray-600">
+        Source code by <a href="https://github.com/glimmora/eth-key-generator" className="text-blue-500">https://github.com/maragung/eth-key-generator</a>
+      </footer>
     </div>
   );
 }

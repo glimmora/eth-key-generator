@@ -11,6 +11,8 @@ export default function Home() {
   const [searchPrivateKey, setSearchPrivateKey] = useState("");
   const [searchAddress, setSearchAddress] = useState("");
   const [generateCount, setGenerateCount] = useState(1);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchCancelled, setSearchCancelled] = useState(false);
 
   const generateKey = () => {
     let keys = [];
@@ -25,38 +27,38 @@ export default function Home() {
   };
 
   const searchKey = () => {
+    setIsSearching(true);
+    setSearchCancelled(false);
     let wallet;
-    do {
+
+    const findWallet = () => {
+      if (searchCancelled) {
+        setIsSearching(false);
+        return;
+      }
       wallet = ethers.Wallet.createRandom();
-    } while (
-      (prefix && !wallet.address.startsWith(prefix)) ||
-      (suffix && !wallet.address.endsWith(suffix))
-    );
-    setSearchPrivateKey(wallet.privateKey);
-    setSearchAddress(wallet.address);
+      if (
+        (!prefix || wallet.address.startsWith(prefix)) &&
+        (!suffix || wallet.address.endsWith(suffix))
+      ) {
+        setSearchPrivateKey(wallet.privateKey);
+        setSearchAddress(wallet.address);
+        setIsSearching(false);
+      } else {
+        setTimeout(findWallet, 10); // Memberikan jeda untuk menghindari pembekuan UI
+      }
+    };
+
+    findWallet();
+  };
+
+  const cancelSearch = () => {
+    setSearchCancelled(true);
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert("Copied to clipboard");
-  };
-
-  const clearResults = () => {
-    setPrivateKeys([]);
-    setAddresses([]);
-    setSearchPrivateKey("");
-    setSearchAddress("");
-  };
-
-  const exportToJson = () => {
-    const data = { privateKeys, addresses };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "eth_keys.json";
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -101,9 +103,18 @@ export default function Home() {
           <button
             onClick={searchKey}
             className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 w-full"
+            disabled={isSearching}
           >
-            Search Key
+            {isSearching ? "Searching..." : "Search Key"}
           </button>
+          {isSearching && (
+            <button
+              onClick={cancelSearch}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
+            >
+              Cancel Search
+            </button>
+          )}
         </div>
       </div>
 
@@ -145,10 +156,6 @@ export default function Home() {
               </button>
             </div>
           )}
-          <div className="flex gap-2 mt-4">
-            <button onClick={clearResults} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full">Clear Results</button>
-            <button onClick={exportToJson} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">Export to JSON</button>
-          </div>
         </div>
       )}
     </div>

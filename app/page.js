@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { ethers } from "ethers";
 
@@ -13,7 +12,6 @@ export default function Home() {
   const [generateCount, setGenerateCount] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchCancelled, setSearchCancelled] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   const generateKey = () => {
     let keys = [];
@@ -30,9 +28,7 @@ export default function Home() {
   const searchKey = () => {
     setIsSearching(true);
     setSearchCancelled(false);
-    setProgress(0);
     let wallet;
-    let attempts = 0;
 
     const findWallet = () => {
       if (searchCancelled) {
@@ -40,8 +36,6 @@ export default function Home() {
         return;
       }
       wallet = ethers.Wallet.createRandom();
-      attempts++;
-      setProgress(attempts % 100);
       if (
         (!prefix || wallet.address.startsWith(prefix)) &&
         (!suffix || wallet.address.endsWith(suffix))
@@ -59,6 +53,7 @@ export default function Home() {
 
   const cancelSearch = () => {
     setSearchCancelled(true);
+    setIsSearching(false);
   };
 
   const clearResults = () => {
@@ -68,18 +63,22 @@ export default function Home() {
     setSearchAddress("");
   };
 
-  const exportResults = () => {
-    const data = JSON.stringify({
-      privateKeys,
-      addresses,
-      searchPrivateKey,
-      searchAddress,
-    }, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
+  const exportToJson = () => {
+    const data = {
+      generated: privateKeys.map((key, index) => ({
+        privateKey: key,
+        address: addresses[index],
+      })),
+      searchResult: searchPrivateKey
+        ? { privateKey: searchPrivateKey, address: searchAddress }
+        : null,
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "eth_keys.json";
+    a.download = "eth-keys.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -87,13 +86,13 @@ export default function Home() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard");
+    alert("Copied to clipboard!");
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <h1 className="text-2xl md:text-3xl font-bold mb-4 text-center">Ethereum Private Key Generator</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
         <div className="flex flex-col items-center bg-white p-4 shadow-md rounded w-full">
           <h2 className="text-lg font-semibold mb-2">Generate Random Keys</h2>
@@ -137,33 +136,68 @@ export default function Home() {
             {isSearching ? "Searching..." : "Search Key"}
           </button>
           {isSearching && (
-            <>
-              <div className="w-full bg-gray-200 h-2 mt-2">
-                <div className="bg-green-500 h-2" style={{ width: `${progress}%` }}></div>
-              </div>
-              <button
-                onClick={cancelSearch}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
-              >
-                Cancel Search
-              </button>
-            </>
+            <button
+              onClick={cancelSearch}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
+            >
+              Cancel Search
+            </button>
           )}
         </div>
       </div>
 
       {(privateKeys.length > 0 || searchPrivateKey) && (
         <div className="mt-6 p-4 bg-white shadow-md rounded w-full max-w-2xl">
-          {privateKeys.length > 0 && (
-            <button onClick={clearResults} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 w-full mb-2">Clear Results</button>
+          {privateKeys.length > 0 && privateKeys.map((key, index) => (
+            <div key={index} className="mb-4 border-b pb-2">
+              <p className="break-all"><strong>Generated Private Key:</strong> {key}</p>
+              <button 
+                onClick={() => copyToClipboard(key)}
+                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
+              >
+                Copy Private Key
+              </button>
+              <p className="break-all mt-2"><strong>Generated Address:</strong> {addresses[index]}</p>
+              <button 
+                onClick={() => copyToClipboard(addresses[index])}
+                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
+              >
+                Copy Address
+              </button>
+            </div>
+          ))}
+          {searchPrivateKey && (
+            <div className="mt-4">
+              <p className="break-all"><strong>Found Private Key:</strong> {searchPrivateKey}</p>
+              <button 
+                onClick={() => copyToClipboard(searchPrivateKey)}
+                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
+              >
+                Copy Private Key
+              </button>
+              <p className="break-all mt-2"><strong>Found Address:</strong> {searchAddress}</p>
+              <button 
+                onClick={() => copyToClipboard(searchAddress)}
+                className="bg-gray-500 text-white px-3 py-1 mt-2 rounded hover:bg-gray-600 w-full"
+              >
+                Copy Address
+              </button>
+            </div>
           )}
-          {privateKeys.length > 0 && (
-            <button onClick={exportResults} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full mb-2">Export to JSON</button>
-          )}
+
+          <div className="mt-4 flex gap-2">
+            <button onClick={clearResults} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full">
+              Clear Results
+            </button>
+            <button onClick={exportToJson} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
+              Export to JSON
+            </button>
+          </div>
         </div>
       )}
-      <footer className="mt-6 text-center text-gray-600">
-        Source code by <a href="https://github.com/glimmora/eth-key-generator" className="text-blue-500">https://github.com/maragung/eth-key-generator</a>
+
+      <footer className="mt-6 text-center text-gray-500">
+        Source code by <a href="https://github.com/maragung/eth-key-generator" className="text-blue-500">maragung</a>
       </footer>
     </div>
   );

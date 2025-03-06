@@ -11,6 +11,7 @@ export default function Home() {
   const [searchAddress, setSearchAddress] = useState("");
   const [generateCount, setGenerateCount] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [searchCancelled, setSearchCancelled] = useState(false);
 
   const generateKey = () => {
@@ -28,14 +29,24 @@ export default function Home() {
   const searchKey = () => {
     setIsSearching(true);
     setSearchCancelled(false);
-    let wallet;
+    setProgress(0);
 
+    let wallet;
+    let attempts = 0;
     const findWallet = () => {
       if (searchCancelled) {
         setIsSearching(false);
+        setProgress(0);
         return;
       }
+
       wallet = ethers.Wallet.createRandom();
+      attempts++;
+
+      if (attempts % 100 === 0) {
+        setProgress((prev) => (prev < 100 ? prev + 5 : 100));
+      }
+
       if (
         (!prefix || wallet.address.startsWith(prefix)) &&
         (!suffix || wallet.address.endsWith(suffix))
@@ -43,6 +54,7 @@ export default function Home() {
         setSearchPrivateKey(wallet.privateKey);
         setSearchAddress(wallet.address);
         setIsSearching(false);
+        setProgress(100);
       } else {
         setTimeout(findWallet, 10);
       }
@@ -54,6 +66,7 @@ export default function Home() {
   const cancelSearch = () => {
     setSearchCancelled(true);
     setIsSearching(false);
+    setProgress(0);
   };
 
   const clearResults = () => {
@@ -61,6 +74,7 @@ export default function Home() {
     setAddresses([]);
     setSearchPrivateKey("");
     setSearchAddress("");
+    setProgress(0);
   };
 
   const exportToJson = () => {
@@ -136,12 +150,20 @@ export default function Home() {
             {isSearching ? "Searching..." : "Search Key"}
           </button>
           {isSearching && (
-            <button
-              onClick={cancelSearch}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
-            >
-              Cancel Search
-            </button>
+            <>
+              <div className="w-full bg-gray-300 rounded-full h-4 mt-3">
+                <div
+                  className="bg-green-500 h-4 rounded-full"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+              <button
+                onClick={cancelSearch}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full mt-2"
+              >
+                Cancel Search
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -184,15 +206,6 @@ export default function Home() {
               </button>
             </div>
           )}
-
-          <div className="mt-4 flex gap-2">
-            <button onClick={clearResults} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full">
-              Clear Results
-            </button>
-            <button onClick={exportToJson} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
-              Export to JSON
-            </button>
-          </div>
         </div>
       )}
 

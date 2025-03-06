@@ -206,12 +206,23 @@ export default function Home() {
               </button>
             </div>
           )}
+
+          <div className="mt-4 flex space-x-2">
+            <button 
+              onClick={clearResults}
+              className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full"
+            >
+              Clear Results
+            </button>
+            <button 
+              onClick={exportToJson}
+              className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 w-full"
+            >
+              Export to JSON
+            </button>
+          </div>
         </div>
       )}
-
-      <footer className="mt-6 text-center text-gray-500">
-        Source code by <a href="https://github.com/maragung/eth-key-generator" className="text-blue-500">maragung</a>
-      </footer>
     </div>
   );
 }
